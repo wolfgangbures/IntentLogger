@@ -1,0 +1,36 @@
+{
+  "title": "Intent Logger",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Log Assist transcripts and intents",
+        "description": "Stores full text and structured results locally in config/intent_logger, never audio. Logs and optional failure events can contain private information. Uses internal Assist APIs; verify compatibility before upgrading Home Assistant. Empty pipeline selection captures all pipelines.",
+        "data": {
+          "pipeline_ids": "Pipelines (empty means all)",
+          "retention_days": "Maximum retention (days)",
+          "max_file_mb": "Maximum segment size (MiB)",
+          "max_files": "Maximum number of segments",
+          "failure_events": "Fire intent_logger_failed events"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Intent Logger is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Intent Logger options",
+        "description": "Changes reload logging. Empty pipeline selection captures all pipelines, including future ones. Size limits may remove logs before their retention period. Failure events expose the same private text to automations and potentially Recorder.",
+        "data": {
+          "pipeline_ids": "Pipelines (empty means all)",
+          "retention_days": "Maximum retention (days)",
+          "max_file_mb": "Maximum segment size (MiB)",
+          "max_files": "Maximum number of segments",
+          "failure_events": "Fire intent_logger_failed events"
+        }
+      }
+    }
+  }
+}
