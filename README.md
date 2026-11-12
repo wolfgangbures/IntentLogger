@@ -11,6 +11,21 @@ controller and intent handler. Installation and end-to-end speech operation
 in a real Home Assistant instance have **not** yet been verified.
 Do not treat this preview as production-certified.
 
+## AI-assisted development (vibe coding)
+
+This integration was created using a vibe-coding / AI-assisted development
+workflow with GitHub Copilot in VS Code. The coding models recorded for this
+work were **gpt-6.1-sol** and **gpt-6-luna** (medium reasoning). They assisted
+with researching Home Assistant APIs and drafting the implementation,
+documentation, and tests. The project was validated with its automated tests,
+HACS validation, and hassfest, but has not yet been verified in a live
+Home Assistant installation; automated checks are not a substitute for that
+testing.
+
+These models were used as development tools only. They are **not** runtime
+dependencies, and this integration does not send transcripts or intent data to
+them.
+
 ## Features
 
 - Captures all Assist pipelines by default, or a selected set.
