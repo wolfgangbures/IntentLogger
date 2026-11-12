@@ -150,6 +150,9 @@ class Processor:
 class DuplicateWakeUpProcessor:
     """Reproduce the exact duplicate wake-word pipeline exception."""
 
+    response_audio = None
+    supports_streaming_response = False
+
     async def async_execute(self, request):
         raise DuplicateWakeUpDetectedError("Okay Nabu")
 
