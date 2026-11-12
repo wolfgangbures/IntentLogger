@@ -3,6 +3,44 @@
 from intent_logger_units.capture import RunRecord
 
 
+def test_duplicate_wake_up_is_logged_but_ignored_for_failure_by_default():
+    record = RunRecord(
+        {"run_id": "duplicate"},
+        ignored_error_codes=frozenset({"duplicate_wake_up_detected"}),
+    )
+    error = {
+        "stage": "pipeline",
+        "code": "duplicate_wake_up_detected",
+        "message": "A second assistant heard the wake word",
+    }
+    intermediate = record.event("error", error, "error-time")
+    summary = record.event("run-end", {}, "end-time")
+    assert intermediate["status"] == "pending"
+    assert summary["status"] == "ignored"
+    assert summary["errors"] == [error]
+    assert summary["ignored_errors"] == [error]
+
+
+def test_duplicate_wake_up_remains_a_failure_when_not_ignored():
+    record = RunRecord({"run_id": "duplicate"})
+    record.event("error", {"code": "duplicate_wake_up_detected"}, "error-time")
+    summary = record.event("run-end", {}, "end-time")
+    assert summary["status"] == "failed"
+    assert summary["ignored_errors"] == []
+
+
+def test_ignoring_one_error_does_not_hide_other_pipeline_errors():
+    record = RunRecord(
+        {},
+        errors=[
+            {"code": "duplicate_wake_up_detected"},
+            {"code": "stt-stream-failed"},
+        ],
+        ignored_error_codes=frozenset({"duplicate_wake_up_detected"}),
+    )
+    assert record.snapshot("run-end", "time")["status"] == "failed"
+
+
 def test_speech_and_structured_result_are_correlated_and_snapshotted():
     record = RunRecord({"run_id": "run-one"})
     transcript = record.event(

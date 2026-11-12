@@ -12,6 +12,7 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_FAILURE_EVENTS,
+    CONF_IGNORE_DUPLICATE_WAKE_UPS,
     CONF_MAX_FILE_MB,
     CONF_MAX_FILES,
     CONF_PIPELINE_IDS,
@@ -50,6 +51,10 @@ def _schema(hass: HomeAssistant, current: Mapping[str, Any]) -> vol.Schema:
             ),
             vol.Required(
                 CONF_FAILURE_EVENTS, default=current[CONF_FAILURE_EVENTS]
+            ): bool,
+            vol.Required(
+                CONF_IGNORE_DUPLICATE_WAKE_UPS,
+                default=current[CONF_IGNORE_DUPLICATE_WAKE_UPS],
             ): bool,
         }
     )

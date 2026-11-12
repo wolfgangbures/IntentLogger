@@ -26,6 +26,18 @@ These models were used as development tools only. They are **not** runtime
 dependencies, and this integration does not send transcripts or intent data to
 them.
 
+## Icon in HACS
+
+The integration's local icon is included at
+`custom_components/intent_logger/brand/icon.png`, and Home Assistant displays
+it on the integration details page. Home Assistant 2026.11's Marketplace is
+intended to display these local brand images too. If the Marketplace card
+still says **"icon not available"** on 2026.11+, the image is present in this
+repository and the remaining issue is in Marketplace's card rendering. See
+[the HACS report and Marketplace maintainer guidance](https://github.com/hacs/integration/issues/5223);
+if it persists on the current Home Assistant release, report it to
+[Home Assistant Marketplace](https://github.com/home-assistant/core/issues?q=is%3Aissue+is%3Aopen+label%3A%22integration%3A+marketplace%22).
+
 ## Features
 
 - Captures all Assist pipelines by default, or a selected set.
@@ -66,6 +78,7 @@ HACS installation itself still needs validation on a real instance.
 | Maximum segment size | 10 MiB | Rotate before exceeding this size. Range: 1-100 MiB. |
 | Maximum segments | 20 | Delete oldest segments when this count is exceeded. Range: 1-100. |
 | Failure events | Enabled | Fire `intent_logger_failed` once per failed run. |
+| Ignore duplicate wake-ups when firing failure events | Enabled | Keep `duplicate_wake_up_detected` in the logs, but classify the run as `ignored` and do not fire a failure event. Disable to classify it as `failed` and fire the event. |
 
 Change settings using the integration's options. Applying options reloads the
 integration; runs already active during that reload might only have their
@@ -77,7 +90,7 @@ Logs are in `<config>/intent_logger/intent_logger-<UTC timestamp>-<unique ID>.js
 They are deliberately **not** stored in `www`, entity state attributes, or
 Home Assistant's normal log.
 
-Each line is a JSON object with `schema_version: 1` and:
+Each line is a JSON object with `schema_version: 2` and:
 
 - `run_id`, `pipeline_id`, `pipeline_name`, and UTC `timestamp`;
 - `event_type`: `stt-end`, `intent-end`, `error`, or `run-end`;
@@ -87,15 +100,22 @@ Each line is a JSON object with `schema_version: 1` and:
 - `stt_text` and `text_input` (typed messages have no STT transcript);
 - `intent_output`: the structured conversation result exposed by the pipeline;
 - `intents`: handled intent names, slot snapshots, and any handler exceptions;
-- `errors`, `processed_locally` when available, and `status`.
+- `errors`, `ignored_errors`, `processed_locally` when available, and `status`.
 
 **Multiple lines per run are intentional.** The `stt-end` snapshot queues the
 transcript as soon as it exists, before intent processing completes.
 `intent-end` adds the corresponding result. The final `run-end` snapshot is
 the combined summary; filter on it for one record per execution, and join
-earlier snapshots by `run_id`. `status` is `pending`, `success`, `failed`, or
-`incomplete`. A run that never produces an intent result, such as an STT-only
+earlier snapshots by `run_id`. `status` is `pending`, `success`, `failed`,
+`ignored`, or `incomplete`. A run that never produces an intent result, such as an STT-only
 pipeline, is `incomplete`, not an invented intent success.
+
+By default, Home Assistant's `duplicate_wake_up_detected` error is preserved in
+`errors` and `ignored_errors`, and the final record has `status: ignored`. This
+means another assistant heard the same wake word; it is not an unrecognized
+request, so it does not fire `intent_logger_failed`. Turn off **Ignore duplicate
+wake-ups when firing failure events** in the integration options to classify it
+as a failure instead. Other errors in the same run still make it failed.
 
 An unrecognized sentence has an error response even if the pipeline technically
 completed. Such a run is classified as failed. Structured partial action failures

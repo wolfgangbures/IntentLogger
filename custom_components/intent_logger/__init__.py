@@ -15,6 +15,7 @@ from homeassistant.helpers import intent
 
 from .const import (
     CONF_FAILURE_EVENTS,
+    CONF_IGNORE_DUPLICATE_WAKE_UPS,
     CONF_MAX_FILE_MB,
     CONF_MAX_FILES,
     CONF_PIPELINE_IDS,
@@ -53,6 +54,7 @@ class Runtime:
             settings[CONF_PIPELINE_IDS],
             self.enqueue,
             self.fire_failure,
+            ignore_duplicate_wake_ups=settings[CONF_IGNORE_DUPLICATE_WAKE_UPS],
         )
         self._stopping = False
 

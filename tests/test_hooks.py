@@ -51,6 +51,17 @@ def rig():
         async def async_execute(self, pipeline_input, *, validate=False):
             try:
                 self.process_event(Event("run-start", {"conversation_id": self.id}))
+                if self.id == "duplicate":
+                    self.process_event(
+                        Event(
+                            "error",
+                            {
+                                "code": "duplicate_wake_up_detected",
+                                "message": "Duplicate wake-up detected",
+                            },
+                        )
+                    )
+                    return "upstream-result"
                 if pipeline_input.stt_stream is not None:
                     self.process_event(
                         Event("stt-end", {"stt_output": {"text": self.id}})
@@ -141,6 +152,34 @@ async def test_failure_fires_once_and_preserves_input_and_intent_error(rig):
     assert rig.failed[0]["source"] == "text"
     assert rig.failed[0]["intents"][0]["error"]["type"] == "IntentError"
     assert run.seen[-1] == "run-end"
+
+
+@pytest.mark.parametrize(
+    ("ignore_duplicate", "expected_status", "expected_failure_events"),
+    [(True, "ignored", 0), (False, "failed", 1)],
+)
+async def test_duplicate_wake_up_failure_event_filter(
+    rig, ignore_duplicate, expected_status, expected_failure_events
+):
+    duplicate_observer = PipelineObserver(
+        rig.hass,
+        rig.Run,
+        rig.intent,
+        [],
+        rig.emitted.append,
+        rig.failed.append,
+        ignore_duplicate_wake_ups=ignore_duplicate,
+    )
+    rig.observer.uninstall()
+    duplicate_observer.install()
+    try:
+        await rig.Run("duplicate").async_execute(pipeline_input())
+        summary = rig.emitted[-1]
+        assert summary["status"] == expected_status
+        assert summary["errors"][0]["code"] == "duplicate_wake_up_detected"
+        assert len(rig.failed) == expected_failure_events
+    finally:
+        duplicate_observer.uninstall()
 
 
 @pytest.mark.parametrize(

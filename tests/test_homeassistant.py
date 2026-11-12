@@ -22,6 +22,9 @@ from homeassistant.components.assist_pipeline import (  # noqa: E402
     PipelineStage,
 )
 from homeassistant.components.assist_pipeline.const import DATA_CONFIG  # noqa: E402
+from homeassistant.components.assist_pipeline.error import (  # noqa: E402
+    DuplicateWakeUpDetectedError,
+)
 from homeassistant.components.assist_pipeline.run import PipelineInput  # noqa: E402
 from homeassistant.components.assist_pipeline.runtime import (  # noqa: E402
     KEY_ASSIST_PIPELINE,
@@ -42,7 +45,11 @@ from custom_components.intent_logger.config_flow import (  # noqa: E402
     IntentLoggerOptionsFlow,
     _schema,
 )
-from custom_components.intent_logger.const import DEFAULTS, EVENT_FAILED  # noqa: E402
+from custom_components.intent_logger.const import (  # noqa: E402
+    CONF_IGNORE_DUPLICATE_WAKE_UPS,
+    DEFAULTS,
+    EVENT_FAILED,
+)
 
 
 @pytest.fixture
@@ -140,6 +147,16 @@ class Processor:
         pass
 
 
+class DuplicateWakeUpProcessor:
+    """Reproduce the exact duplicate wake-word pipeline exception."""
+
+    async def async_execute(self, request):
+        raise DuplicateWakeUpDetectedError("Okay Nabu")
+
+    def cleanup(self):
+        pass
+
+
 class Handler(intent.IntentHandler):
     intent_type = "LoggerTest"
 
@@ -217,6 +234,44 @@ async def test_queue_overflow_and_failure_event_option(hass, caplog):
         assert not events
     finally:
         unsubscribe()
+
+
+@pytest.mark.parametrize(
+    ("ignore_duplicate", "expected_status", "expected_event_count"),
+    [(True, "ignored", 0), (False, "failed", 1)],
+)
+async def test_real_core_duplicate_wake_up_is_logged_and_optionally_ignored(
+    hass, ignore_duplicate, expected_status, expected_event_count
+):
+    runtime = Runtime(
+        hass,
+        {**DEFAULTS, CONF_IGNORE_DUPLICATE_WAKE_UPS: ignore_duplicate},
+    )
+    await hass.async_add_executor_job(runtime.store.prepare)
+    runtime.observer.install()
+    runtime.worker = asyncio.create_task(runtime.write_records())
+    failures = []
+    unsubscribe = hass.bus.async_listen(
+        EVENT_FAILED, lambda event: failures.append(event.data)
+    )
+    try:
+        pipeline_input = make_run(hass, lambda event: None, speech=True)
+        pipeline_input.run._processor = DuplicateWakeUpProcessor()
+        await pipeline_input.execute()
+        await hass.async_block_till_done()
+    finally:
+        await runtime.stop()
+        unsubscribe()
+    records = [
+        json.loads(line)
+        for path in runtime.store.directory.glob("*.jsonl")
+        for line in path.read_text().splitlines()
+    ]
+    summary = records[-1]
+    assert summary["status"] == expected_status
+    assert summary["errors"][0]["code"] == "duplicate_wake_up_detected"
+    assert summary["ignored_errors"] == (summary["errors"] if ignore_duplicate else [])
+    assert len(failures) == expected_event_count
 
 
 async def test_setup_and_unload_restore_hooks_and_flush(hass):

@@ -10,7 +10,8 @@
           "retention_days": "Maximum retention (days)",
           "max_file_mb": "Maximum segment size (MiB)",
           "max_files": "Maximum number of segments",
-          "failure_events": "Fire intent_logger_failed events"
+          "failure_events": "Fire intent_logger_failed events",
+          "ignore_duplicate_wake_ups": "Ignore duplicate wake-ups when firing failure events"
         }
       }
     },
@@ -28,7 +29,8 @@
           "retention_days": "Maximum retention (days)",
           "max_file_mb": "Maximum segment size (MiB)",
           "max_files": "Maximum number of segments",
-          "failure_events": "Fire intent_logger_failed events"
+          "failure_events": "Fire intent_logger_failed events",
+          "ignore_duplicate_wake_ups": "Ignore duplicate wake-ups when firing failure events"
         }
       }
     }

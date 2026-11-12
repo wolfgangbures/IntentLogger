@@ -16,6 +16,7 @@ class RunRecord:
     intents: list[dict[str, Any]] = field(default_factory=list)
     errors: list[dict[str, Any]] = field(default_factory=list)
     finished: bool = False
+    ignored_error_codes: frozenset[str] = field(default_factory=frozenset)
 
     def event(
         self, event_type: str, data: dict[str, Any], timestamp: str
@@ -56,17 +57,24 @@ class RunRecord:
 
     def snapshot(self, event_type: str, timestamp: str) -> dict[str, Any]:
         """Copy state so later events cannot mutate queued records."""
-        if self.errors:
+        ignored_errors = [
+            error
+            for error in self.errors
+            if error.get("code") in self.ignored_error_codes
+        ]
+        if len(ignored_errors) < len(self.errors):
             status = "failed"
         elif self.intent_output is not None:
             status = "success"
+        elif self.finished and ignored_errors:
+            status = "ignored"
         elif self.finished:
             status = "incomplete"
         else:
             status = "pending"
         return deepcopy(
             {
-                "schema_version": 1,
+                "schema_version": 2,
                 **self.metadata,
                 "timestamp": timestamp,
                 "event_type": event_type,
@@ -75,6 +83,7 @@ class RunRecord:
                 "intent_output": self.intent_output,
                 "intents": self.intents,
                 "errors": self.errors,
+                "ignored_errors": ignored_errors,
                 "status": status,
             }
         )

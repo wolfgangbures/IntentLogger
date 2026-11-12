@@ -12,6 +12,11 @@ from types import ModuleType
 from typing import Any
 
 from .capture import RunRecord
+from .const import (
+    CONF_IGNORE_DUPLICATE_WAKE_UPS,
+    DEFAULTS,
+    IGNORED_PIPELINE_ERROR_CODES,
+)
 
 _LOGGER = logging.getLogger(__name__)
 _CURRENT_RUN: ContextVar[RunRecord | None] = ContextVar(
@@ -30,6 +35,7 @@ class PipelineObserver:
         pipeline_ids: list[str],
         emit: Callable[[dict[str, Any]], None],
         failed: Callable[[dict[str, Any]], None],
+        ignore_duplicate_wake_ups: bool = DEFAULTS[CONF_IGNORE_DUPLICATE_WAKE_UPS],
     ) -> None:
         """Prepare per-instance hooks without installing them yet."""
         self.hass = hass
@@ -38,6 +44,9 @@ class PipelineObserver:
         self.pipeline_ids = set(pipeline_ids)
         self.emit = emit
         self.failed = failed
+        self.ignored_error_codes = (
+            IGNORED_PIPELINE_ERROR_CODES if ignore_duplicate_wake_ups else frozenset()
+        )
         self._runs: dict[str, RunRecord] = {}
         self._enabled = False
         self._originals: list[tuple[Any, str, Callable, Callable]] = []
@@ -98,6 +107,7 @@ class PipelineObserver:
                     else "text",
                 },
                 text_input=pipeline_input.intent_input,
+                ignored_error_codes=self.ignored_error_codes,
             )
             self._runs[run.id] = record
             token = _CURRENT_RUN.set(record)
@@ -194,7 +204,7 @@ class PipelineObserver:
             self.emit(snapshot)
         except Exception:
             _LOGGER.exception("Unable to deliver an Intent Logger record")
-        if snapshot["event_type"] == "run-end" and snapshot["errors"]:
+        if snapshot["event_type"] == "run-end" and snapshot["status"] == "failed":
             try:
                 self.failed(snapshot)
             except Exception:

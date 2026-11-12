@@ -1,6 +1,6 @@
 [project]
 name = "ha-intent-logger"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local Assist pipeline transcript and intent logging for Home Assistant"
 requires-python = ">=3.14"
 
