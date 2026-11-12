@@ -209,9 +209,14 @@ async def test_queue_overflow_and_failure_event_option(hass, caplog):
     runtime.enqueue({"run_id": "one"})
     runtime.enqueue({"run_id": "two"})
     assert "backlog is full" in caplog.text
-    with patch.object(hass.bus, "async_fire") as fire:
+    events = []
+    unsubscribe = hass.bus.async_listen(EVENT_FAILED, events.append)
+    try:
         runtime.fire_failure({"run_id": "one"})
-        fire.assert_not_called()
+        await hass.async_block_till_done()
+        assert not events
+    finally:
+        unsubscribe()
 
 
 async def test_setup_and_unload_restore_hooks_and_flush(hass):

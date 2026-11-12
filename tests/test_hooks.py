@@ -2,6 +2,7 @@
 
 import asyncio
 from dataclasses import dataclass
+from functools import wraps
 from types import ModuleType, SimpleNamespace
 
 import pytest
@@ -62,11 +63,18 @@ def rig():
                 if self.id == "explode":
                     raise RuntimeError("upstream failure")
                 try:
+                    if self.id == "fallback":
+                        try:
+                            await intent_module.async_handle(
+                                self.hass, "conversation", "fail"
+                            )
+                        except IntentError:
+                            pass
                     await intent_module.async_handle(
                         self.hass,
                         "conversation",
                         "fail" if self.id == "fail" else "HassTurnOn",
-                        {"name": {"value": self.id}},
+                        getattr(pipeline_input, "slots", {"name": {"value": self.id}}),
                     )
                     response = {"response_type": "action_done", "data": {}}
                 except IntentError:
@@ -194,3 +202,60 @@ async def test_non_pipeline_intent_calls_are_not_captured(rig):
         == "intent-result"
     )
     assert not rig.emitted
+
+
+async def test_successful_fallback_records_attempt_but_does_not_fire_failure(rig):
+    await rig.Run("fallback").async_execute(pipeline_input())
+    final = rig.emitted[-1]
+    assert final["status"] == "success"
+    assert len(final["intents"]) == 2
+    assert final["intents"][0]["error"]["type"] == "IntentError"
+    assert not rig.failed
+
+
+async def test_uncopyable_slots_do_not_prevent_intent_execution(rig, caplog):
+    class Uncopyable:
+        def __deepcopy__(self, memo):
+            raise TypeError("cannot copy")
+
+    data = pipeline_input()
+    data.slots = {"value": Uncopyable()}
+    assert await rig.Run("one").async_execute(data) == "upstream-result"
+    assert "Unable to capture intent name or slots" in caplog.text
+    assert rig.emitted[-1]["status"] == "success"
+
+
+async def test_failed_log_delivery_does_not_suppress_failure_event(rig):
+    def broken(record):
+        raise OSError("no space")
+
+    rig.observer.emit = broken
+    await rig.Run("fail").async_execute(pipeline_input())
+    assert len(rig.failed) == 1
+
+
+async def test_chained_hook_is_disabled_and_can_be_reloaded(rig):
+    previous = rig.Run.process_event
+
+    @wraps(previous)
+    def other_integration(run, event):
+        return previous(run, event)
+
+    rig.Run.process_event = other_integration
+    rig.observer.uninstall()
+    assert rig.Run.process_event is other_integration
+    await rig.Run("uncaptured").async_execute(pipeline_input())
+    assert not rig.emitted
+    replacement = PipelineObserver(
+        rig.hass, rig.Run, rig.intent, [], rig.emitted.append, rig.failed.append
+    )
+    replacement.install()
+    try:
+        await rig.Run("captured").async_execute(pipeline_input())
+        assert [r["event_type"] for r in rig.emitted] == [
+            "stt-end",
+            "intent-end",
+            "run-end",
+        ]
+    finally:
+        replacement.uninstall()

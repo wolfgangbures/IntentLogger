@@ -56,7 +56,8 @@ class PipelineObserver:
                 or tuple(inspect.signature(method).parameters)[: len(prefix)] != prefix
             ):
                 raise RuntimeError(f"Unsupported Home Assistant API: {name}")
-            if getattr(method, "_intent_logger_hook", False):
+            observer = getattr(method, "_intent_logger_hook", None)
+            if isinstance(observer, PipelineObserver) and observer._enabled:
                 raise RuntimeError("Intent Logger hooks are already installed")
 
         original_event = self.run_class.process_event
@@ -158,7 +159,7 @@ class PipelineObserver:
             (self.intent_module, "async_handle", async_handle),
         ):
             original = getattr(owner, name)
-            replacement._intent_logger_hook = True
+            replacement._intent_logger_hook = self
             self._originals.append((owner, name, original, replacement))
             setattr(owner, name, replacement)
 
