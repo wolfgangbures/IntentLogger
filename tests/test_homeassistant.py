@@ -113,7 +113,9 @@ class Processor:
         )
         if self.failing:
             response = intent.IntentResponse(language="en")
-            response.async_set_error("no_intent_match", "No matching intent")
+            response.async_set_error(
+                intent.IntentResponseErrorCode.NO_INTENT_MATCH, "No matching intent"
+            )
         else:
             response = await intent.async_handle(
                 self.run.hass,
