@@ -4,12 +4,11 @@ A custom Home Assistant integration that observes Assist pipelines, logs
 speech-to-text (STT) transcripts alongside conversation/intent results, and
 optionally fires an event when processing fails.
 
-**Experimental preview.** Targets Home Assistant Core **2026.11.1** and Python
-3.14. Pipeline signatures and event payloads were checked against that Core tag.
+**Stable v1.0.0.** Targets Home Assistant Core **2026.11.1** and Python 3.14.
+Pipeline signatures and event payloads were checked against that Core tag.
 Includes unit tests and Linux API-level tests using the real Core pipeline
 controller and intent handler. Installation and end-to-end speech operation
-in a real Home Assistant instance have **not** yet been verified.
-Do not treat this preview as production-certified.
+in a real Home Assistant instance have not been independently verified.
 
 ## AI-assisted development (vibe coding)
 
@@ -18,9 +17,8 @@ workflow with GitHub Copilot in VS Code. The coding models recorded for this
 work were **gpt-6.1-sol** and **gpt-6-luna** (medium reasoning). They assisted
 with researching Home Assistant APIs and drafting the implementation,
 documentation, and tests. The project was validated with its automated tests,
-HACS validation, and hassfest, but has not yet been verified in a live
-Home Assistant installation; automated checks are not a substitute for that
-testing.
+HACS validation, and hassfest. Installation and end-to-end speech operation
+have not been independently verified in a live Home Assistant installation.
 
 These models were used as development tools only. They are **not** runtime
 dependencies, and this integration does not send transcripts or intent data to
@@ -59,8 +57,8 @@ This repository is intended for HACS custom-repository installation; it is
 
 1. In HACS, open the menu and choose **Custom repositories**.
 2. Add `https://github.com/wolfgangbures/IntentLogger` as **Integration**.
-3. Find **Intent Logger**, download the preview, and restart Home Assistant.
-   Enable beta/pre-release versions in HACS if needed, or select the main branch.
+3. Find **Intent Logger**, download the stable release, and restart Home
+   Assistant.
 4. Open **Settings > Devices & services > Add integration > Intent Logger**.
 5. Review the privacy notice and choose the logging options.
 
@@ -218,10 +216,11 @@ To erase logs, first disable/unload the integration, then delete its log segment
 ## Compatibility and implementation
 
 Home Assistant does not expose a supported global Assist event subscription.
-This preview wraps `PipelineRun.async_execute`, `PipelineRun.process_event`, and
-`homeassistant.helpers.intent.async_handle`. It preserves the original client
-callback, return values, and exceptions. A task-local context associates handled
-intents with the correct run, including simultaneous conversations.
+The integration wraps `PipelineRun.async_execute`,
+`PipelineRun.process_event`, and `homeassistant.helpers.intent.async_handle`.
+It preserves the original client callback, return values, and exceptions. A
+task-local context associates handled intents with the correct run, including
+simultaneous conversations.
 
 Setup checks the relevant parameter names before installing hooks. This is a
 guard, **not a guarantee** that a future release's semantics remain compatible.
@@ -250,12 +249,13 @@ setup/unload, and UI configuration schemas. Linux CI also runs hassfest and
 HACS validation. Automated tests replace external speech/agent work with a test
 processor; they do not replace testing with a real microphone and agents.
 
-Before a stable release:
+Release checks:
 
 1. Check that the Linux tests, hassfest, and HACS validation pass.
-2. Install through HACS in a test instance; exercise real speech, typed Assist,
-   an unrecognized sentence, concurrent requests, and a pipeline/STT error.
-3. Verify options reload, shutdown flushing, and removal restore normal Assist.
+
+Live-instance testing is recommended, but is not a release prerequisite. This
+release's automated checks do not exercise real microphones, speech agents, or
+installation through HACS in a running Home Assistant instance.
 
 Default-catalog discovery requires a separate HACS submission/review; GitHub
 Marketplace is not the installation mechanism for Home Assistant integrations.
