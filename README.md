@@ -7,8 +7,8 @@ optionally fires an event when processing fails.
 **Stable v1.0.0.** Targets Home Assistant Core **2026.11.1** and Python 3.14.
 Pipeline signatures and event payloads were checked against that Core tag.
 Includes unit tests and Linux API-level tests using the real Core pipeline
-controller and intent handler. Installation and end-to-end speech operation
-in a real Home Assistant instance have not been independently verified.
+controller and intent handler. It has also been running in a live Home
+Assistant environment for two days without issues.
 
 ## AI-assisted development (vibe coding)
 
@@ -17,8 +17,8 @@ workflow with GitHub Copilot in VS Code. The coding models recorded for this
 work were **gpt-6.1-sol** and **gpt-6-luna** (medium reasoning). They assisted
 with researching Home Assistant APIs and drafting the implementation,
 documentation, and tests. The project was validated with its automated tests,
-HACS validation, and hassfest. Installation and end-to-end speech operation
-have not been independently verified in a live Home Assistant installation.
+HACS validation, and hassfest. It has also been running in a live Home Assistant
+environment for two days without issues.
 
 These models were used as development tools only. They are **not** runtime
 dependencies, and this integration does not send transcripts or intent data to
@@ -253,9 +253,11 @@ Release checks:
 
 1. Check that the Linux tests, hassfest, and HACS validation pass.
 
-Live-instance testing is recommended, but is not a release prerequisite. This
-release's automated checks do not exercise real microphones, speech agents, or
-installation through HACS in a running Home Assistant instance.
+Live-instance testing is recommended, but is not a release prerequisite.
+Automated checks do not exercise real microphones, speech agents, or
+installation through HACS in a running Home Assistant instance; the integration
+has separately been running in a live Home Assistant environment for two days
+without issues.
 
 Default-catalog discovery requires a separate HACS submission/review; GitHub
 Marketplace is not the installation mechanism for Home Assistant integrations.
